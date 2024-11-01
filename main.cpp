@@ -3,6 +3,10 @@
 
 int const SIZE = 10;
 int const POISON = -1;
+const char* const kDumpFileName = "dump.gv";
+
+#define FCLOSE(ptr_) \
+    do { fclose(ptr_); ptr_ = NULL; } while(0)
 
 struct linkedList
 {
@@ -22,6 +26,7 @@ void pushBack(linkedList* tmp, int value);
 void pushAfterNth(linkedList* tmp, size_t index, int value);
 void pushBeforeNth(linkedList* tmp, size_t index, int value);
 void deleteNth(linkedList* tmp, size_t index);
+void dump(linkedList* tmp);
 
 int main()
 {
@@ -47,6 +52,8 @@ int main()
     printf("\n");
     for (int i = 1; i < SIZE; i++) printf("%5d", tmp.prev[i]);
     printf("\n");
+
+    dump(&tmp);
 
     return 0;
 }
@@ -160,3 +167,70 @@ void deleteNth(linkedList* tmp, size_t index)
 
     tmp->counter--;
 }
+
+void dump(linkedList* tmp)
+{
+    FILE* dumpFile = fopen(kDumpFileName, "wb");
+    assert(dumpFile);
+
+    fprintf(dumpFile, "digraph\n");
+    fprintf(dumpFile, "{\n    ");
+    fprintf(dumpFile, "rankdir = LR;\n\n");
+
+    for (int i = 0; i < SIZE; i++)
+    {
+        fprintf(dumpFile, "    node_%d [shape=record,label=\" ip: %d | data: %d | next: %d | prev: %d \"];\n",
+                i, i, tmp->data[i], tmp->next[i], tmp->prev[i]);
+    }
+
+    fprintf(dumpFile, "\n    edge [ style = invis, weight = 100 ];\n    ");
+    for (int i = 0; i < SIZE - 1; i++)
+    {
+        fprintf(dumpFile, "node_%d -> ", i);
+    }
+    fprintf(dumpFile, "node_%d;\n", SIZE - 1);
+
+    fprintf(dumpFile, "\n    edge [ color = green, style = filled, weight = 99, headport = n, tailport = n ];\n    ");
+
+    FCLOSE(dumpFile);
+}
+
+// digraph
+// {
+//   rankdir=LR;
+//   node_1 [shape=record,label=" ip: 1 | data: 10 | next: -1 | prev: -1"];
+//   node_2 [shape=record,label=" ip: 2 | data: 5 | next: 3 | prev: 0"];
+//   node_3 [shape=record,label=" ip: 3 | data: 2 | next: 4 | prev: 2"];
+//   node_4 [shape=record,label=" ip: 4 | data: 52 | next: 0 | prev: 3"];
+//   node_1 -> node_2 -> node_3 -> node_4;
+// }
+
+
+// digraph
+// {
+//     rankdir = LR;
+//
+//     node_0 [shape=record,label=" ip: 0 | data: 0 | next: 2 | prev: -1 "];
+//     node_1 [shape=record,label=" ip: 1 | data: 10 | next: -1 | prev: -1 "];
+//     node_2 [shape=record,label=" ip: 2 | data: 5 | next: 3 | prev: 0 "];
+//     node_3 [shape=record,label=" ip: 3 | data: 2 | next: 4 | prev: 2 "];
+//     node_4 [shape=record,label=" ip: 4 | data: 52 | next: 0 | prev: 3 "];
+//     node_5 [shape=record,label=" ip: 5 | data: 0 | next: -1 | prev: -1 "];
+//     node_6 [shape=record,label=" ip: 6 | data: 0 | next: -1 | prev: -1 "];
+//     node_7 [shape=record,label=" ip: 7 | data: 0 | next: -1 | prev: -1 "];
+//     node_8 [shape=record,label=" ip: 8 | data: 0 | next: -1 | prev: -1 "];
+//     node_9 [shape=record,label=" ip: 9 | data: 0 | next: -1 | prev: -1 "];
+//
+//     edge [ style = invis, weight = 100 ];
+//     node_0 -> node_1 -> node_2 -> node_3 -> node_4 -> node_5 -> node_6 -> node_7 -> node_8 -> node_9;
+//
+//     edge [ color = green, style = filled, weight = 99, headport = n, tailport = n ];
+//     node_0 -> node_2;
+//     node_2 -> node_3;
+//     node_3 -> node_4;
+//
+//     edge [ color = red, style = filled, weight = 0, headport = s, tailport = s ];
+//     node_2 -> node_0;
+//     node_3 -> node_2;
+//     node_4 -> node_3;
+// }
