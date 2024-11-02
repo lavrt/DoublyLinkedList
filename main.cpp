@@ -9,6 +9,8 @@ const char* const kDumpFileName = "dump.gv";
 
 #define FCLOSE(ptr_) \
     do { fclose(ptr_); ptr_ = NULL; } while(0)
+#define LISTASSERT(list_) \
+    do { listAssertFunc(list_, __FILE__, __LINE__, __func__); } while(0)
 
 struct dblLinkedList
 {
@@ -18,35 +20,39 @@ struct dblLinkedList
 
     int free;
     size_t counter;
+    int error;
 };
 
 enum ErrorCodes
 {
-    Success                = 0,
-    ListOverflow           = 1,
-    ListUnderflow          = 2,
-    OutOfBoundsListAccess  = 3,
-    DumpFileOpenningError  = 4,
-    NullPointerDereference = 5,
+    Success                =  0,
+    ListOverflow           =  1,
+    ListUnderflow          =  2,
+    ElementNotFound        = -1,
+    OutOfBoundsListAccess  =  3,
+    DumpFileOpenningError  =  4,
+    NullPointerDereference =  5,
 };
 
-void ctor(dblLinkedList* const list);
-void dtor(dblLinkedList* const list);
-void dump(const dblLinkedList* const list);
-void pushFront(dblLinkedList* const list, const int value);
-void pushBack (dblLinkedList* const list, const int value);
-void pushBeforeNth(dblLinkedList* const list, const size_t index, const int value);
-void pushAfterNth (dblLinkedList* const list, const size_t index, const int value);
+ErrorCodes ctor(dblLinkedList* const list);
+ErrorCodes dtor(dblLinkedList* const list);
+ErrorCodes dump(dblLinkedList* const list);
+ErrorCodes pushFront(dblLinkedList* const list, const int value);
+ErrorCodes pushBack (dblLinkedList* const list, const int value);
+ErrorCodes pushBeforeNth(dblLinkedList* const list, const size_t index, const int value);
+ErrorCodes pushAfterNth (dblLinkedList* const list, const size_t index, const int value);
 
-int front(const dblLinkedList* const list);
-int back(const dblLinkedList* const list);
-int next(const dblLinkedList* const list, const size_t index);
-int prev(const dblLinkedList* const list, const size_t index);
-int getNth(const dblLinkedList* const list, const size_t index);
-int search(const dblLinkedList* const list, int value);
+int front(dblLinkedList* const list);
+int back(dblLinkedList* const list);
+int next(dblLinkedList* const list, const size_t index);
+int prev(dblLinkedList* const list, const size_t index);
+int getNth(dblLinkedList* const list, const size_t index);
+int search(dblLinkedList* const list, int value);
 
-void deleteNth(dblLinkedList* const list, const size_t index);
-void clear(dblLinkedList* const list);
+ErrorCodes listError(const dblLinkedList* const list);
+ErrorCodes listAssertFunc(dblLinkedList* const list, const char * file, const int line, const char * const func);
+
+ErrorCodes deleteNth(dblLinkedList* const list, const size_t index);
 
 int main()
 {
@@ -59,12 +65,12 @@ int main()
     // pushFront(&list, 5); pushFront(&list, 2); pushFront(&list, 52);
     // pushBack(&list, 10); pushBack(&list, 20); pushBack(&list, 30); pushBack(&list, 40);
     // pushBack(&list, 5); pushBack(&list, 2); pushBack(&list, 52);
-    pushAfterNth(&list, 1, 52); pushAfterNth(&list, 1, 53);
+    // pushAfterNth(&list, 1, 52); pushAfterNth(&list, 1, 53);
     // pushAfterNth(&list, 1, 152);
     // pushBeforeNth(&list, 1, 52); pushBeforeNth(&list, 1, 53);
     // pushBeforeNth(&list, 1, 777);
-    deleteNth(&list, 3);
-    pushBack(&list, 20);
+    // deleteNth(&list, 3);
+    // pushBack(&list, 20);
 
     dump(&list);
 
@@ -73,9 +79,9 @@ int main()
     return 0;
 }
 
-void ctor(dblLinkedList* const list)
+ErrorCodes ctor(dblLinkedList* const list)
 {
-    assert(list);
+    LISTASSERT(list);
 
     list->free = 1;
     list->counter = 0;
@@ -88,9 +94,12 @@ void ctor(dblLinkedList* const list)
         list->prev[i] = ptrPOISON;
     }
     list->next[kSize - 1] = 0;
+
+    list->error = Success;
+    return Success;
 }
 
-void dtor(dblLinkedList* const list)
+ErrorCodes dtor(dblLinkedList* const list)
 {
     assert(list);
 
@@ -100,12 +109,15 @@ void dtor(dblLinkedList* const list)
 
     list->free = 0;
     list->counter = 0;
+
+    return Success;
 }
 
-void pushFront(dblLinkedList* const list, const int value)
+ErrorCodes pushFront(dblLinkedList* const list, const int value)
 {
-    assert(list);
-    assert(++list->counter < kSize);
+    LISTASSERT(list);
+    list->counter++;
+    LISTASSERT(list);
 
     int free = list->next[list->free];
     list->data[list->free] = value;
@@ -115,12 +127,15 @@ void pushFront(dblLinkedList* const list, const int value)
     list->prev[list->free] = 0;
 
     list->free = free;
+
+    return Success;
 }
 
-void pushBack(dblLinkedList* const list, const int value)
+ErrorCodes pushBack(dblLinkedList* const list, const int value)
 {
-    assert(list);
-    assert(++list->counter < kSize);
+    LISTASSERT(list);
+    list->counter++;
+    LISTASSERT(list);
 
     int free = list->next[list->free];
     list->data[list->free] = value;
@@ -130,13 +145,16 @@ void pushBack(dblLinkedList* const list, const int value)
     list->prev[0] = list->free;
 
     list->free = free;
+
+    return Success;
 }
 
-void pushAfterNth(dblLinkedList* const list, const size_t index, const int value)
+ErrorCodes pushAfterNth(dblLinkedList* const list, const size_t index, const int value)
 {
-    assert(list);
-    assert(++list->counter < kSize);
-    assert(list->prev[index] != ptrPOISON);
+    LISTASSERT(list);
+    if (list->prev[index] == ptrPOISON) { list->error = OutOfBoundsListAccess ; }
+    list->counter++;
+    LISTASSERT(list);
 
     int free = list->next[list->free];
     list->data[list->free] = value;
@@ -146,13 +164,16 @@ void pushAfterNth(dblLinkedList* const list, const size_t index, const int value
     list->prev[list->free] = (int)index;
 
     list->free = free;
+
+    return Success;
 }
 
-void pushBeforeNth(dblLinkedList* const list, const size_t index, const int value)
+ErrorCodes pushBeforeNth(dblLinkedList* const list, const size_t index, const int value)
 {
-    assert(list);
-    assert(++list->counter < kSize);
-    assert(list->prev[index] != ptrPOISON);
+    LISTASSERT(list);
+    if (list->prev[index] == ptrPOISON) { list->error = OutOfBoundsListAccess ; }
+    list->counter++;
+    LISTASSERT(list);
 
     int free = list->next[list->free];
     list->data[list->free] = value;
@@ -162,49 +183,54 @@ void pushBeforeNth(dblLinkedList* const list, const size_t index, const int valu
     list->prev[index] = list->free;
 
     list->free = free;
+
+    return Success;
 }
 
-int front(const dblLinkedList* const list)
+int front(dblLinkedList* const list)
 {
-    assert(list);
+    LISTASSERT(list);
 
     return list->next[0];
 }
 
-int back(const dblLinkedList* const list)
+int back(dblLinkedList* const list)
 {
-    assert(list);
+    LISTASSERT(list);
 
     return list->prev[0];
 }
 
-int next(const dblLinkedList* const list, const size_t index)
+int next(dblLinkedList* const list, const size_t index)
 {
-    assert(list);
-    assert(list->prev[index] != ptrPOISON);
+    LISTASSERT(list);
+    if (list->prev[index] == ptrPOISON) { list->error = OutOfBoundsListAccess ; }
+    LISTASSERT(list);
 
     return list->next[index];
 }
 
-int prev(const dblLinkedList* const list, const size_t index)
+int prev(dblLinkedList* const list, const size_t index)
 {
-    assert(list);
-    assert(list->prev[index] != ptrPOISON);
+    LISTASSERT(list);
+    if (list->prev[index] == ptrPOISON) { list->error = OutOfBoundsListAccess ; }
+    LISTASSERT(list);
 
     return list->prev[index];
 }
 
-int getNth(const dblLinkedList* const list, const size_t index)
+int getNth(dblLinkedList* const list, const size_t index)
 {
-    assert(list);
-    assert(list->prev[index] != ptrPOISON);
+    LISTASSERT(list);
+    if (list->prev[index] == ptrPOISON) { list->error = OutOfBoundsListAccess ; }
+    LISTASSERT(list);
 
     return list->data[index];
 }
 
-int search(const dblLinkedList* const list, int value)
+int search(dblLinkedList* const list, int value)
 {
-    assert(list);
+    LISTASSERT(list);
 
     for (int i = list->next[0]; i != list->prev[0]; i = list->next[i])
     {
@@ -214,14 +240,15 @@ int search(const dblLinkedList* const list, int value)
         }
     }
 
-    return -1;
+    return ElementNotFound;
 }
 
-void deleteNth(dblLinkedList* const list, const size_t index) // FIXME
+ErrorCodes deleteNth(dblLinkedList* const list, const size_t index)
 {
-    assert(list);
-    assert(list->counter--);
-    assert(list->prev[index] != ptrPOISON);
+    LISTASSERT(list);
+    if (list->prev[index] == ptrPOISON) { list->error = OutOfBoundsListAccess ; }
+    list->counter--;
+    LISTASSERT(list);
 
     list->next[list->prev[index]] = list->next[index];
     list->prev[list->next[index]] = list->prev[index];
@@ -230,20 +257,17 @@ void deleteNth(dblLinkedList* const list, const size_t index) // FIXME
     list->prev[index] = ptrPOISON;
 
     list->next[index] = list->free;
-    list->free = index;
+    list->free = (int)index;
+
+    return Success;
 }
 
-void clear(dblLinkedList* const list)
-{
-
-}
-
-void dump(const dblLinkedList* const list)
+ErrorCodes dump(dblLinkedList* const list)
 {
     assert(list);
 
     FILE* dumpFile = fopen(kDumpFileName, "wb");
-    assert(dumpFile);
+    if (!dumpFile) { list->error = DumpFileOpenningError; assert(0); }
 
     fprintf(dumpFile, "digraph\n");
     fprintf(dumpFile, "{\n    ");
@@ -280,4 +304,25 @@ void dump(const dblLinkedList* const list)
     fprintf(dumpFile, "\n}\n");
 
     FCLOSE(dumpFile);
+
+    return Success;
+}
+
+ErrorCodes listError(const dblLinkedList* const list)
+{
+    if (!list)                           { return NullPointerDereference; }
+    if (!list->counter && list->next[0]) { return ListUnderflow         ; }
+    if (list->counter >= kSize)          { return ListOverflow          ; }
+                                         { return Success               ; }
+}
+
+ErrorCodes listAssertFunc(dblLinkedList* const list, const char * file, const int line, const char * const func)
+{
+    if (!listError(list)) { return Success; }
+
+    fprintf(stderr, "%s:%d in function: %s\n", file, line, func);
+    dump(list);
+    dtor(list);
+
+    assert(0);
 }
