@@ -63,7 +63,8 @@ int main()
     // pushAfterNth(&list, 1, 152);
     // pushBeforeNth(&list, 1, 52); pushBeforeNth(&list, 1, 53);
     // pushBeforeNth(&list, 1, 777);
-    // deleteNth(&list, 5);
+    deleteNth(&list, 3);
+    pushBack(&list, 20);
 
     dump(&list);
 
@@ -216,7 +217,7 @@ int search(const dblLinkedList* const list, int value)
     return -1;
 }
 
-void deleteNth(dblLinkedList* const list, const size_t index)
+void deleteNth(dblLinkedList* const list, const size_t index) // FIXME
 {
     assert(list);
     assert(list->counter--);
@@ -227,6 +228,9 @@ void deleteNth(dblLinkedList* const list, const size_t index)
 
     list->next[index] = ptrPOISON;
     list->prev[index] = ptrPOISON;
+
+    list->next[index] = list->free;
+    list->free = index;
 }
 
 void clear(dblLinkedList* const list)
