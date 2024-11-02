@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
 
-int const SIZE = 10;
-int const POISON = -1;
+const size_t kSize = 10;
+const int POISON_1 = -333;
+const int POISON_2 = -1;
 const char* const kDumpFileName = "dump.gv";
 
 #define FCLOSE(ptr_) \
@@ -10,21 +12,22 @@ const char* const kDumpFileName = "dump.gv";
 
 struct linkedList
 {
-    int data[SIZE];
-    int next[SIZE];
-    int prev[SIZE];
+    int data[kSize];
+    int next[kSize];
+    int prev[kSize];
 
-    size_t free;
+    int free;
     size_t counter;
 };
 
-void ctor(linkedList* tmp);
-void pushFront(linkedList* tmp, int value);
-void pushBack(linkedList* tmp, int value);
-void pushAfterNth(linkedList* tmp, size_t index, int value);
-void pushBeforeNth(linkedList* tmp, size_t index, int value);
-void deleteNth(linkedList* tmp, size_t index);
-void dump(linkedList* tmp);
+void ctor(linkedList* const tmp);
+void dtor(linkedList* const tmp);
+void dump(const linkedList* const tmp);
+void pushFront(linkedList* const tmp, const int value);
+void pushBack (linkedList* const tmp, const int value);
+void pushBeforeNth(linkedList* const tmp, const size_t index, const int value);
+void pushAfterNth (linkedList* const tmp, const size_t index, const int value);
+void deleteNth(linkedList* const tmp, const size_t index);
 
 int main()
 {
@@ -38,36 +41,50 @@ int main()
     pushBack(&tmp, 10); pushBack(&tmp, 20); pushBack(&tmp, 30); pushBack(&tmp, 40);
     // pushBack(&tmp, 5); pushBack(&tmp, 2); pushBack(&tmp, 52);
     // pushAfterNth(&tmp, 1, 52); pushAfterNth(&tmp, 1, 53);
-    pushAfterNth(&tmp, 1, 152);
-    // pushBeforeNth(&tmp, 1, 52); pushBeforeNth(&tmp, 1, 53); pushBeforeNth(&tmp, 3, 777);
-    // deleteNth(&tmp, 1);
-
-    for (int i = 0; i < SIZE; i++) printf("%5d", i);
-    printf("\n\n");
-    for (int i = 0; i < SIZE; i++) printf("%5d", tmp.data[i]);
-    printf("\n");
-    for (int i = 0; i < SIZE; i++) printf("%5d", tmp.next[i]);
-    printf("\n");
-    for (int i = 0; i < SIZE; i++) printf("%5d", tmp.prev[i]);
-    printf("\n");
+    // pushAfterNth(&tmp, 1, 152);
+    // pushBeforeNth(&tmp, 1, 52); pushBeforeNth(&tmp, 1, 53);
+    pushBeforeNth(&tmp, 1, 777);
+    // deleteNth(&tmp, 5);
 
     dump(&tmp);
+
+    dtor(&tmp);
 
     return 0;
 }
 
-void ctor(linkedList* tmp)
-{
-    tmp->free = 1;
-
-    for (int i = 1; i < SIZE; i++) { tmp->next[i] = POISON; }
-    for (int i = 1; i < SIZE; i++) { tmp->prev[i] = POISON; }
-}
-
-void pushFront(linkedList* tmp, int value)
+void ctor(linkedList* const tmp)
 {
     assert(tmp);
-    assert(tmp->counter + 1 < SIZE);
+
+    tmp->free = 1;
+    tmp->counter = 0;
+    tmp->data[0] = POISON_1;
+
+    for (size_t i = 1; i < kSize; i++)
+    {
+        tmp->data[i] = POISON_1;
+        tmp->next[i] = POISON_2;
+        tmp->prev[i] = POISON_2;
+    }
+}
+
+void dtor(linkedList* const tmp)
+{
+    assert(tmp);
+
+    memset(tmp->data, 0, kSize * sizeof(int));
+    memset(tmp->next, 0, kSize * sizeof(int));
+    memset(tmp->prev, 0, kSize * sizeof(int));
+
+    tmp->free = 0;
+    tmp->counter = 0;
+}
+
+void pushFront(linkedList* const tmp, const int value)
+{
+    assert(tmp);
+    assert(++tmp->counter < kSize);
 
     tmp->data[tmp->free] = value;
     tmp->next[tmp->free] = tmp->next[0];
@@ -75,14 +92,13 @@ void pushFront(linkedList* tmp, int value)
     tmp->next[0] = tmp->free;
     tmp->prev[tmp->free] = 0;
 
-    tmp->counter++;
     tmp->free++;
 }
 
-void pushBack(linkedList* tmp, int value)
+void pushBack(linkedList* const tmp, const int value)
 {
     assert(tmp);
-    assert(tmp->counter + 1 < SIZE);
+    assert(++tmp->counter < kSize);
 
     tmp->data[tmp->free] = value;
     tmp->next[tmp->prev[0]] = tmp->free;
@@ -90,141 +106,93 @@ void pushBack(linkedList* tmp, int value)
     tmp->next[tmp->free] = 0;
     tmp->prev[0] = tmp->free;
 
-    tmp->counter++;
     tmp->free++;
 }
 
-void pushAfterNth(linkedList* tmp, size_t index, int value)
+void pushAfterNth(linkedList* const tmp, const size_t index, const int value)
 {
     assert(tmp);
-    assert(index != 0);
-    assert(tmp->counter + 1 < SIZE); // FIXME
+    assert(index);
     assert(index <= tmp->counter);
+    assert(++tmp->counter < kSize);
 
     tmp->data[tmp->free] = value;
     tmp->next[tmp->free] = tmp->next[index];
     tmp->prev[tmp->next[index]] = tmp->free;
     tmp->next[index] = tmp->free;
-    tmp->prev[tmp->free] = index;
+    tmp->prev[tmp->free] = (int)index;
 
-    tmp->counter++;
     tmp->free++;
 }
 
-void pushBeforeNth(linkedList* tmp, size_t index, int value)
+void pushBeforeNth(linkedList* const tmp, const size_t index, const int value)
 {
     assert(tmp);
-    assert(index != 0);
-    assert(tmp->counter + 1 < SIZE); // FIXME
+    assert(index);
     assert(index <= tmp->counter);
+    assert(++tmp->counter < kSize);
 
     tmp->data[tmp->free] = value;
-    tmp->next[tmp->free] = index;
-    tmp->prev[tmp->free] = tmp->prev[index]; // FIXME
-    tmp->next[tmp->prev[index]] = tmp->free; // FIXME
+    tmp->next[tmp->free] = (int)index;
+    tmp->prev[tmp->free] = tmp->prev[index];
+    tmp->next[tmp->prev[index]] = tmp->free;
     tmp->prev[index] = tmp->free;
 
-    tmp->counter++;
     tmp->free++;
 }
 
-void deleteNth(linkedList* tmp, size_t index)
+void deleteNth(linkedList* const tmp, const size_t index)
 {
     assert(tmp);
-    assert(tmp->counter != 0);
+    assert(tmp->counter--);
 
     tmp->next[tmp->prev[index]] = tmp->next[index];
     tmp->prev[tmp->next[index]] = tmp->prev[index];
 
-    tmp->next[index] = POISON;
-    tmp->prev[index] = POISON;
-
-    tmp->counter--;
+    tmp->next[index] = POISON_2;
+    tmp->prev[index] = POISON_2;
 }
 
-void dump(linkedList* tmp)
+void dump(const linkedList* const tmp)
 {
+    assert(tmp);
+
     FILE* dumpFile = fopen(kDumpFileName, "wb");
     assert(dumpFile);
 
     fprintf(dumpFile, "digraph\n");
     fprintf(dumpFile, "{\n    ");
-    fprintf(dumpFile, "rankdir = LR;\n\n");
+    fprintf(dumpFile, "rankdir = LR;\n    ");
+    fprintf(dumpFile, "node [ style = rounded, color = \"#252A34\", penwidth = 2.5 ];\n    ");
+    fprintf(dumpFile, "bgcolor = \"#E7ECEF\";\n\n");
 
-    for (int i = 0; i < SIZE; i++)
+    for (size_t i = 0; i < kSize; i++)
     {
-        fprintf(dumpFile, "    node_%d [shape=record,label=\" ip: %d | data: %d | next: %d | prev: %d \"];\n",
+        fprintf(dumpFile, "    node_%lu [shape=record,label=\" ip: %lu | data: %d | next: %d | prev: %d \"];\n",
                 i, i, tmp->data[i], tmp->next[i], tmp->prev[i]);
     }
 
     fprintf(dumpFile, "\n    edge [ style = invis, weight = 100 ];\n    ");
-    for (int i = 0; i < SIZE - 1; i++)
+    for (size_t i = 0; i < kSize - 1; i++)
     {
-        fprintf(dumpFile, "node_%d -> ", i);
+        fprintf(dumpFile, "node_%lu -> ", i);
     }
-    fprintf(dumpFile, "node_%d;\n", SIZE - 1);
+    fprintf(dumpFile, "node_%lu;\n", kSize - 1);
 
-    fprintf(dumpFile, "\n    edge [ color = green, style = filled, weight = 0, headport = n, tailport = n ];\n    ");
+    fprintf(dumpFile, "\n    edge [ color = \"#048A81\", style = filled, "
+                      "penwidth = 2, weight = 0, headport = n, tailport = n ];\n    ");
     for (int i = tmp->next[0]; i != tmp->prev[0]; i = tmp->next[i])
     {
         fprintf(dumpFile, "node_%d -> node_%d; ", i, tmp->next[i]);
     }
 
-    fprintf(dumpFile, "\n\n    edge [ color = red, style = filled, weight = 0, headport = s, tailport = s ];\n    ");
+    fprintf(dumpFile, "\n\n    edge [ color = \"#FF2E63\", style = filled, "
+                      "penwidth = 2, weight = 0, headport = s, tailport = s ];\n    ");
     for (int i = tmp->prev[0]; i != tmp->next[0]; i = tmp->prev[i])
     {
         fprintf(dumpFile, "node_%d -> node_%d; ", i, tmp->prev[i]);
     }
     fprintf(dumpFile, "\n}\n");
 
-
-
-
-
-
-
-
-
-
     FCLOSE(dumpFile);
 }
-
-// digraph
-// {
-//   rankdir=LR;
-//   node_1 [shape=record,label=" ip: 1 | data: 10 | next: -1 | prev: -1"];
-//   node_2 [shape=record,label=" ip: 2 | data: 5 | next: 3 | prev: 0"];
-//   node_3 [shape=record,label=" ip: 3 | data: 2 | next: 4 | prev: 2"];
-//   node_4 [shape=record,label=" ip: 4 | data: 52 | next: 0 | prev: 3"];
-//   node_1 -> node_2 -> node_3 -> node_4;
-// }
-
-
-// digraph
-// {
-//     rankdir = LR;
-//
-//     node_0 [shape=record,label=" ip: 0 | data: 0 | next: 2 | prev: -1 "];
-//     node_1 [shape=record,label=" ip: 1 | data: 10 | next: -1 | prev: -1 "];
-//     node_2 [shape=record,label=" ip: 2 | data: 5 | next: 3 | prev: 0 "];
-//     node_3 [shape=record,label=" ip: 3 | data: 2 | next: 4 | prev: 2 "];
-//     node_4 [shape=record,label=" ip: 4 | data: 52 | next: 0 | prev: 3 "];
-//     node_5 [shape=record,label=" ip: 5 | data: 0 | next: -1 | prev: -1 "];
-//     node_6 [shape=record,label=" ip: 6 | data: 0 | next: -1 | prev: -1 "];
-//     node_7 [shape=record,label=" ip: 7 | data: 0 | next: -1 | prev: -1 "];
-//     node_8 [shape=record,label=" ip: 8 | data: 0 | next: -1 | prev: -1 "];
-//     node_9 [shape=record,label=" ip: 9 | data: 0 | next: -1 | prev: -1 "];
-//
-//     edge [ style = invis, weight = 100 ];
-//     node_0 -> node_1 -> node_2 -> node_3 -> node_4 -> node_5 -> node_6 -> node_7 -> node_8 -> node_9;
-//
-//     edge [ color = green, style = filled, weight = 99, headport = n, tailport = n ];
-//     node_0 -> node_2;
-//     node_2 -> node_3;
-//     node_3 -> node_4;
-//
-//     edge [ color = red, style = filled, weight = 0, headport = s, tailport = s ];
-//     node_2 -> node_0;
-//     node_3 -> node_2;
-//     node_4 -> node_3;
-// }
