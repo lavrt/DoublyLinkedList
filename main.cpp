@@ -20,16 +20,6 @@ struct dblLinkedList
     size_t counter;
 };
 
-enum ErrorCodes
-{
-    Success                = 0,
-    ListOverflow           = 1,
-    ListUnderflow          = 2,
-    OutOfBoundsListAccess  = 3,
-    DumpFileOpenningError  = 4,
-    NullPointerDereference = 5,
-};
-
 void ctor(dblLinkedList* const list);
 void dtor(dblLinkedList* const list);
 void dump(const dblLinkedList* const list);
