@@ -10,7 +10,7 @@ const char* const kDumpFileName = "dump.gv";
 #define FCLOSE(ptr_) \
     do { fclose(ptr_); ptr_ = NULL; } while(0)
 
-struct linkedList
+struct dblLinkedList
 {
     int data[kSize];
     int next[kSize];
@@ -20,142 +20,181 @@ struct linkedList
     size_t counter;
 };
 
-void ctor(linkedList* const tmp);
-void dtor(linkedList* const tmp);
-void dump(const linkedList* const tmp);
-void pushFront(linkedList* const tmp, const int value);
-void pushBack (linkedList* const tmp, const int value);
-void pushBeforeNth(linkedList* const tmp, const size_t index, const int value);
-void pushAfterNth (linkedList* const tmp, const size_t index, const int value);
-void deleteNth(linkedList* const tmp, const size_t index);
+void ctor(dblLinkedList* const list);
+void dtor(dblLinkedList* const list);
+void dump(const dblLinkedList* const list);
+void pushFront(dblLinkedList* const list, const int value);
+void pushBack (dblLinkedList* const list, const int value);
+void pushBeforeNth(dblLinkedList* const list, const size_t index, const int value);
+void pushAfterNth (dblLinkedList* const list, const size_t index, const int value);
+
+int front(const dblLinkedList* const list);
+int back(const dblLinkedList* const list);
+int next(const dblLinkedList* const list, const size_t index);
+int prev(const dblLinkedList* const list, const size_t index);
+
+void deleteNth(dblLinkedList* const list, const size_t index);
+void clear(dblLinkedList* const list);
 
 int main()
 {
-    linkedList tmp = {};
+    dblLinkedList list = {};
 
-    ctor(&tmp);
+    ctor(&list);
 
-    // pushFront(&tmp, 10); pushFront(&tmp, 20); pushFront(&tmp, 30); pushFront(&tmp, 40); pushFront(&tmp, 50);
-    // pushBeforeNth(&tmp, 1, 60); pushAfterNth(&tmp, 5, 52);
-    // pushFront(&tmp, 5); pushFront(&tmp, 2); pushFront(&tmp, 52);
-    pushBack(&tmp, 10); pushBack(&tmp, 20); pushBack(&tmp, 30); pushBack(&tmp, 40);
-    // pushBack(&tmp, 5); pushBack(&tmp, 2); pushBack(&tmp, 52);
-    // pushAfterNth(&tmp, 1, 52); pushAfterNth(&tmp, 1, 53);
-    // pushAfterNth(&tmp, 1, 152);
-    // pushBeforeNth(&tmp, 1, 52); pushBeforeNth(&tmp, 1, 53);
-    pushBeforeNth(&tmp, 1, 777);
-    // deleteNth(&tmp, 5);
+    // pushFront(&list, 10); pushFront(&list, 20); pushFront(&list, 30); pushFront(&list, 40); pushFront(&list, 50);
+    // pushBeforeNth(&list, 1, 60); pushAfterNth(&list, 5, 52);
+    // pushFront(&list, 5); pushFront(&list, 2); pushFront(&list, 52);
+    // pushBack(&list, 10); pushBack(&list, 20); pushBack(&list, 30); pushBack(&list, 40);
+    // pushBack(&list, 5); pushBack(&list, 2); pushBack(&list, 52);
+    // pushAfterNth(&list, 1, 52); pushAfterNth(&list, 1, 53);
+    // pushAfterNth(&list, 1, 152);
+    // pushBeforeNth(&list, 1, 52); pushBeforeNth(&list, 1, 53);
+    pushBeforeNth(&list, 1, 777);
+    // deleteNth(&list, 5);
 
-    dump(&tmp);
+    dump(&list);
 
-    dtor(&tmp);
+    dtor(&list);
 
     return 0;
 }
 
-void ctor(linkedList* const tmp)
+void ctor(dblLinkedList* const list)
 {
-    assert(tmp);
+    assert(list);
 
-    tmp->free = 1;
-    tmp->counter = 0;
-    tmp->data[0] = POISON_1;
+    list->free = 1;
+    list->counter = 0;
+    list->data[0] = POISON_1;
 
     for (size_t i = 1; i < kSize; i++)
     {
-        tmp->data[i] = POISON_1;
-        tmp->next[i] = POISON_2;
-        tmp->prev[i] = POISON_2;
+        list->data[i] = POISON_1;
+        list->next[i] = i + 1;
+        list->prev[i] = POISON_2;
     }
+    list->next[kSize - 1] = 0;
 }
 
-void dtor(linkedList* const tmp)
+void dtor(dblLinkedList* const list)
 {
-    assert(tmp);
+    assert(list);
 
-    memset(tmp->data, 0, kSize * sizeof(int));
-    memset(tmp->next, 0, kSize * sizeof(int));
-    memset(tmp->prev, 0, kSize * sizeof(int));
+    memset(list->data, 0, kSize * sizeof(int));
+    memset(list->next, 0, kSize * sizeof(int));
+    memset(list->prev, 0, kSize * sizeof(int));
 
-    tmp->free = 0;
-    tmp->counter = 0;
+    list->free = 0;
+    list->counter = 0;
 }
 
-void pushFront(linkedList* const tmp, const int value)
+void pushFront(dblLinkedList* const list, const int value)
 {
-    assert(tmp);
-    assert(++tmp->counter < kSize);
+    assert(list);
+    assert(++list->counter < kSize);
 
-    tmp->data[tmp->free] = value;
-    tmp->next[tmp->free] = tmp->next[0];
-    tmp->prev[tmp->next[0]] = tmp->free;
-    tmp->next[0] = tmp->free;
-    tmp->prev[tmp->free] = 0;
+    list->data[list->free] = value;
+    list->next[list->free] = list->next[0];
+    list->prev[list->next[0]] = list->free;
+    list->next[0] = list->free;
+    list->prev[list->free] = 0;
 
-    tmp->free++;
+    list->free++;
 }
 
-void pushBack(linkedList* const tmp, const int value)
+void pushBack(dblLinkedList* const list, const int value)
 {
-    assert(tmp);
-    assert(++tmp->counter < kSize);
+    assert(list);
+    assert(++list->counter < kSize);
 
-    tmp->data[tmp->free] = value;
-    tmp->next[tmp->prev[0]] = tmp->free;
-    tmp->prev[tmp->free] = tmp->prev[0];
-    tmp->next[tmp->free] = 0;
-    tmp->prev[0] = tmp->free;
+    list->data[list->free] = value;
+    list->next[list->prev[0]] = list->free;
+    list->prev[list->free] = list->prev[0];
+    list->next[list->free] = 0;
+    list->prev[0] = list->free;
 
-    tmp->free++;
+    list->free++;
 }
 
-void pushAfterNth(linkedList* const tmp, const size_t index, const int value)
+void pushAfterNth(dblLinkedList* const list, const size_t index, const int value)
 {
-    assert(tmp);
-    assert(index);
-    assert(index <= tmp->counter);
-    assert(++tmp->counter < kSize);
+    assert(list);
+    assert(++list->counter < kSize);
+    assert(list->prev[index] != POISON_2);
 
-    tmp->data[tmp->free] = value;
-    tmp->next[tmp->free] = tmp->next[index];
-    tmp->prev[tmp->next[index]] = tmp->free;
-    tmp->next[index] = tmp->free;
-    tmp->prev[tmp->free] = (int)index;
+    list->data[list->free] = value;
+    list->next[list->free] = list->next[index];
+    list->prev[list->next[index]] = list->free;
+    list->next[index] = list->free;
+    list->prev[list->free] = (int)index;
 
-    tmp->free++;
+    list->free++;
 }
 
-void pushBeforeNth(linkedList* const tmp, const size_t index, const int value)
+void pushBeforeNth(dblLinkedList* const list, const size_t index, const int value)
 {
-    assert(tmp);
-    assert(index);
-    assert(index <= tmp->counter);
-    assert(++tmp->counter < kSize);
+    assert(list);
+    assert(++list->counter < kSize);
+    assert(list->prev[index] != POISON_2);
 
-    tmp->data[tmp->free] = value;
-    tmp->next[tmp->free] = (int)index;
-    tmp->prev[tmp->free] = tmp->prev[index];
-    tmp->next[tmp->prev[index]] = tmp->free;
-    tmp->prev[index] = tmp->free;
+    list->data[list->free] = value;
+    list->next[list->free] = (int)index;
+    list->prev[list->free] = list->prev[index];
+    list->next[list->prev[index]] = list->free;
+    list->prev[index] = list->free;
 
-    tmp->free++;
+    list->free++;
 }
 
-void deleteNth(linkedList* const tmp, const size_t index)
+int front(const dblLinkedList* const list)
 {
-    assert(tmp);
-    assert(tmp->counter--);
+    assert(list);
 
-    tmp->next[tmp->prev[index]] = tmp->next[index];
-    tmp->prev[tmp->next[index]] = tmp->prev[index];
-
-    tmp->next[index] = POISON_2;
-    tmp->prev[index] = POISON_2;
+    return list->next[0];
 }
 
-void dump(const linkedList* const tmp)
+int back(const dblLinkedList* const list)
 {
-    assert(tmp);
+    assert(list);
+
+    return list->prev[0];
+}
+
+int next(const dblLinkedList* const list, const size_t index)
+{
+    assert(list);
+
+    return list->next[index];
+}
+
+int prev(const dblLinkedList* const list, const size_t index)
+{
+    assert(list);
+
+    return list->prev[index];
+}
+
+void deleteNth(dblLinkedList* const list, const size_t index)
+{
+    assert(list);
+    assert(list->counter--);
+
+    list->next[list->prev[index]] = list->next[index];
+    list->prev[list->next[index]] = list->prev[index];
+
+    list->next[index] = POISON_2;
+    list->prev[index] = POISON_2;
+}
+
+void clear(dblLinkedList* const list)
+{
+
+}
+
+void dump(const dblLinkedList* const list)
+{
+    assert(list);
 
     FILE* dumpFile = fopen(kDumpFileName, "wb");
     assert(dumpFile);
@@ -169,7 +208,7 @@ void dump(const linkedList* const tmp)
     for (size_t i = 0; i < kSize; i++)
     {
         fprintf(dumpFile, "    node_%lu [shape=record,label=\" ip: %lu | data: %d | next: %d | prev: %d \"];\n",
-                i, i, tmp->data[i], tmp->next[i], tmp->prev[i]);
+                i, i, list->data[i], list->next[i], list->prev[i]);
     }
 
     fprintf(dumpFile, "\n    edge [ style = invis, weight = 100 ];\n    ");
@@ -181,16 +220,16 @@ void dump(const linkedList* const tmp)
 
     fprintf(dumpFile, "\n    edge [ color = \"#048A81\", style = filled, "
                       "penwidth = 2, weight = 0, headport = n, tailport = n ];\n    ");
-    for (int i = tmp->next[0]; i != tmp->prev[0]; i = tmp->next[i])
+    for (int i = list->next[0]; i != list->prev[0]; i = list->next[i])
     {
-        fprintf(dumpFile, "node_%d -> node_%d; ", i, tmp->next[i]);
+        fprintf(dumpFile, "node_%d -> node_%d; ", i, list->next[i]);
     }
 
     fprintf(dumpFile, "\n\n    edge [ color = \"#FF2E63\", style = filled, "
                       "penwidth = 2, weight = 0, headport = s, tailport = s ];\n    ");
-    for (int i = tmp->prev[0]; i != tmp->next[0]; i = tmp->prev[i])
+    for (int i = list->prev[0]; i != list->next[0]; i = list->prev[i])
     {
-        fprintf(dumpFile, "node_%d -> node_%d; ", i, tmp->prev[i]);
+        fprintf(dumpFile, "node_%d -> node_%d; ", i, list->prev[i]);
     }
     fprintf(dumpFile, "\n}\n");
 
