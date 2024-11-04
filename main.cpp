@@ -12,17 +12,6 @@ const char* const kDumpFileName = "dump.gv";
 #define LISTASSERT(list_) \
     do { listAssertFunc(list_, __FILE__, __LINE__, __func__); } while(0)
 
-struct dblLinkedList
-{
-    int data[kSize];
-    int next[kSize];
-    int prev[kSize];
-
-    int free;
-    size_t counter;
-    int error;
-};
-
 enum ErrorCodes
 {
     Success                =  0,
@@ -32,6 +21,17 @@ enum ErrorCodes
     OutOfBoundsListAccess  =  3,
     DumpFileOpenningError  =  4,
     NullPointerDereference =  5,
+};
+
+struct dblLinkedList
+{
+    int data[kSize];
+    int next[kSize];
+    int prev[kSize];
+
+    int free;
+    size_t counter;
+    ErrorCodes error;
 };
 
 ErrorCodes ctor(dblLinkedList* const list);
@@ -313,6 +313,7 @@ ErrorCodes listError(const dblLinkedList* const list)
     if (!list)                           { return NullPointerDereference; }
     if (!list->counter && list->next[0]) { return ListUnderflow         ; }
     if (list->counter >= kSize)          { return ListOverflow          ; }
+    if (list->error)                     { return list->error           ; }
                                          { return Success               ; }
 }
 
