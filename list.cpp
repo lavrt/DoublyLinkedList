@@ -2,13 +2,19 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <time.h>
 
 // static --------------------------------------------------------------------------------------------------------------
 
 static const int POISON = -333;
 static const int ptrPOISON = -1;
-static const char* const kDumpFileName = "dump.gv";
+static const char* const kDumpFileExtension = ".gv";
+static const char* const kGraphExtension = ".png";
+static const char* const kHtmlFileName = "dump.html";
+static const char* const kGraphNameFile = "namesOfGraphs.txt";
+static const size_t kSizeOfBuffer = 20;
 
+static void dumpHtml(dblLinkedList* const list);
 static ErrorCodes listError(const dblLinkedList* const list);
 static ErrorCodes listAssertFunc(dblLinkedList* const list, const char * file, const int line, const char * const func);
 
@@ -207,8 +213,19 @@ ErrorCodes dump(dblLinkedList* const list)
     assert(list->next);
     assert(list->prev);
 
-    FILE* dumpFile = fopen(kDumpFileName, "wb");
+    time_t currentTime = 0;
+    time(&currentTime);
+    struct tm* timeInfo = localtime(&currentTime);
+    char timeBuffer[kSizeOfBuffer] = {};
+    strftime(timeBuffer, sizeof(timeBuffer), "%Y%m%d%H%M%S", timeInfo);
+
+    FILE* dumpFile = fopen(strcat(timeBuffer, kDumpFileExtension), "w");
     if (!dumpFile) { list->error = DumpFileOpenningError; assert(0); }
+
+    FILE* namesOfGraphs = fopen(kGraphNameFile, "a");
+    if (!namesOfGraphs) { list->error = DumpFileOpenningError; assert(0); }
+    fprintf(namesOfGraphs, "%s\n", timeBuffer);
+    FCLOSE(namesOfGraphs);
 
     fprintf(dumpFile, "digraph\n");
     fprintf(dumpFile, "{\n    ");
@@ -246,10 +263,44 @@ ErrorCodes dump(dblLinkedList* const list)
 
     FCLOSE(dumpFile);
 
+    dumpHtml(list);
+
     return Success;
 }
 
 // static --------------------------------------------------------------------------------------------------------------
+
+static void dumpHtml(dblLinkedList* const list)
+{
+    FILE* htmlFile = fopen(kHtmlFileName, "w");
+    if (!htmlFile) { list->error = DumpFileOpenningError; assert(0); }
+
+    fprintf(htmlFile, "<!DOCTYPE html>\n");
+    fprintf(htmlFile, "<html lang=\"en\">\n");
+    fprintf(htmlFile, "  <head>\n");
+    fprintf(htmlFile, "    <meta charset=\"utf-8\">\n");
+    fprintf(htmlFile, "    <title>dump</title>\n");
+    fprintf(htmlFile, "    <link rel=\"stylesheet\" href=\"style.css\">\n");
+    fprintf(htmlFile, "    <script src=\"script.js\"></script>\n");
+    fprintf(htmlFile, "  </head>\n");
+    fprintf(htmlFile, "  <body>\n");
+
+    FILE* namesOfGraphs = fopen(kGraphNameFile, "r");
+    if (!namesOfGraphs) { list->error = DumpFileOpenningError; assert(0); }
+    char buffer[kSizeOfBuffer] = {};
+    while (fscanf(namesOfGraphs, "%s", buffer) != EOF)
+    {
+        buffer[strlen(buffer) - strlen(kDumpFileExtension)] = '\0';
+        fprintf(htmlFile, "    <img src=\"%s%s\"/>\n", buffer, kGraphExtension);
+        fprintf(stderr, "dot %s%s -Tpng -o %s%s\n", buffer, kDumpFileExtension, buffer, kGraphExtension);
+    }
+    FCLOSE(namesOfGraphs);
+
+    fprintf(htmlFile, "  </body>\n");
+    fprintf(htmlFile, "</html>\n");
+
+    FCLOSE(htmlFile);
+}
 
 static ErrorCodes listError(const dblLinkedList* const list)
 {
