@@ -244,7 +244,7 @@ ErrorCodes dump(dblLinkedList* const list)
     {
         fprintf(dumpFile, "node_%lu -> ", i);
     }
-    fprintf(dumpFile, "node_%lu;\n", kSize - 1);
+    fprintf(dumpFile, "node_%d;\n", kSize - 1);
 
     fprintf(dumpFile, "\n    edge [ color = \"#048A81\", style = filled, "
                       "penwidth = 2, weight = 0, headport = n, tailport = n ];\n    ");

@@ -8,9 +8,11 @@
 #define LISTASSERT(list_) \
     do { listAssertFunc(list_, __FILE__, __LINE__, __func__); } while(0)
 
-const size_t kSize = 10;
+enum {
+    kSize = 10,
+};
 
-enum ErrorCodes
+typedef enum
 {
     ElementNotFound        = -1,
     Success                =  0,
@@ -19,9 +21,9 @@ enum ErrorCodes
     OutOfBoundsListAccess  =  3,
     DumpFileOpenningError  =  4,
     NullPointerDereference =  5,
-};
+} ErrorCodes;
 
-struct dblLinkedList
+typedef struct
 {
     int data[kSize];
     int next[kSize];
@@ -30,7 +32,7 @@ struct dblLinkedList
     int free;
     size_t counter;
     ErrorCodes error;
-};
+} dblLinkedList;
 
 ErrorCodes ctor(dblLinkedList* const list);
 ErrorCodes dtor(dblLinkedList* const list);
